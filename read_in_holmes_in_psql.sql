@@ -9,7 +9,8 @@ CREATE TABLE imoti
 	TITLE varchar,
 	ADDRESS varchar, 
 	DETAILS json, 
-	NEIGHBORHOOD varchar, 
+	REGION varchar,
+	PLACE varchar, 
 	LON float, 
 	LAT float, 
 	ID varchar, 
@@ -29,13 +30,15 @@ CREATE TABLE imoti
 ---- Append new batch
 ----------------------
 
+drop table if exists imoti_import
+
 CREATE TABLE imoti_import
 (
 	LINK varchar, 
 	TITLE varchar,
 	ADDRESS varchar, 
 	DETAILS varchar, 
-	NEIGHBORHOOD varchar, 
+	PLACE varchar, 
 	LON varchar, 
 	LAT varchar, 
 	ID varchar, 
@@ -50,7 +53,15 @@ CREATE TABLE imoti_import
 	POLY varchar
 );
 
-copy imoti_import (link, title, address, details, neighborhood, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, poly) 
+/*
+E:\imoti\holmes_2103_2020.tsv
+E:\imoti\holmes.bg_0405.tsv
+E:\imoti\holmes.bg_0425.tsv
+E:\imoti\holmes.bg_0509.tsv
+E:\imoti\holmes_sofia_oblast_0504.tsv
+E:\imoti\holmes_sofia_oblast_0509.tsv
+*/
+copy imoti_import (link, title, address, details, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, poly) 
 FROM 'E:\imoti\holmes_2103_2020.tsv' DELIMITER E'\t' CSV HEADER
 
 
@@ -59,12 +70,15 @@ CREATE FUNCTION ROUND(float,int) RETURNS NUMERIC AS $$
 $$ language SQL IMMUTABLE;
 
 
+drop table if exists imoti_import_casted
+
 CREATE TABLE imoti_import_casted AS
 SELECT 
 	link, title, 
-	substring(address from neighborhood||'(.*)') as address, 
+	substring(address from trim(place)||'(.*)') as address, 
 	details::json,
-	neighborhood, lon::float, lat::float,
+	substring(address from '(.*)'||trim(place)) as region, 
+	trim(place), lon::float, lat::float,
 	id, 
 	case when lower(price) like '%лв%' then round(replace(substring(price from '[\d\s]+'), ' ', '')::float / 1.9588, 2)
 		else replace(substring(trim(price) from '[\d\s]+'), ' ', '')::float 
@@ -76,26 +90,26 @@ SELECT
 		else 'EUR'
 		END as currency,
 	substring(area from '[\d]+')::bigint as area,
-	substring(floor from '[\d]+')::bigint as floor,
+	CASE WHEN LOWER(TRIM(floor)) IN ('партер', 'сутерен') then 1 ELSE substring(floor from '[\d]+')::bigint END as floor,
 	description, views::bigint as views, date, agency,
 	'2020-03-21' as measurement_day
 FROM imoti_import
+						 
 
-insert into imoti (link, title, address, details, neighborhood, lon, lat, id, price, price_sqm, currency, area, floor, description, views, date, agency, measurement_day)
+insert into imoti (link, title, address, details, region, place, lon, lat, id, price, price_sqm, currency, area, floor, description, views, date, agency, measurement_day)
 select * from imoti_import_casted
 
 select measurement_day, count(*) from imoti group by 1 order by 1
 
-select * from imoti limit 10
-
-drop table if exists imoti_import_casted
-drop table if exists imoti_import
+----QA----
+select * from (
+select *, lower(details->>'Етаж:') as fl from imoti ) a
+where fl = 'партер' and floor is null
+limit 10
 
 -----------------------------------------------
 ----------------- Exploration
 -----------------------------------------------
-
-
 ---------
 --- Apartments
 ---------
@@ -111,7 +125,7 @@ select
 	title,
 	address,
 	details,
-	neighborhood,
+	place,
 	price, price_sqm, area, floor, 
 	measurement_day,
 	agg.price_diff,
@@ -119,7 +133,7 @@ select
 from imoti
 left join (select distinct id, price_diff from agg) agg using(id)
 where agg.price_diff < -5000
-and measurement_day = '2020-04-25'
+and measurement_day = (select max(measurement_day) from imoti)
 and title ~ 'АПАРТАМЕНТ'
 and area > 60 and area < 80
 and price < 80000
@@ -131,7 +145,7 @@ WHERE id = '1b158279354601090'
 order by measurement_day asc
 
 --------------
---
+-- Parcels
 --------------
 
 with agg as (
@@ -146,7 +160,7 @@ select
 	title,
 	address,
 	details,
-	neighborhood,
+	place,
 	price, price_sqm, area, floor, 
 	measurement_day,
 	agg.price_diff,
@@ -164,8 +178,8 @@ order by agg.price_diff asc, id
 On a side note there's normally a distinction within other DBMS that functions can only call SELECT statements and should not modify data 
 while procedures should be handling the data manipulation and data definition languages (DML, DDL). 
 */
-CREATE TYPE reduced_properties_result AS (id text, title text, address text, details JSON, neighborhood text, price BIGINT, price_sqm float, 
-										  area BIGINT, floor BIGINT,  measurement_day text, price_diff BIGINT, link text);
+CREATE TYPE reduced_properties_result AS (id text, title text, address text, details JSON, place text, price float, price_sqm float, 
+										  area BIGINT, floor BIGINT,  measurement_day text, price_diff float, link text);
 
 CREATE FUNCTION most_reduced(type_of_property varchar(30), min_diff bigint, price_less_than bigint) RETURNS SETOF reduced_properties_result
 AS $$
@@ -181,7 +195,7 @@ select
 	title,
 	address,
 	details,
-	neighborhood,
+	place,
 	price, price_sqm, area, floor, 
 	measurement_day,
 	agg.price_diff,
@@ -195,7 +209,7 @@ and price < price_less_than
 order by agg.price_diff asc, id $$
 LANGUAGE SQL;
 
-select * from most_reduced('АПАРТАМЕНТ', -5000, 80000)
+select * from most_reduced('ПАРЦЕЛ', -1000, 35000)
 
 
 
