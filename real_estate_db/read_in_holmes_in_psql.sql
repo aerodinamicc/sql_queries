@@ -60,9 +60,12 @@ E:\imoti\holmes.bg_0425.tsv
 E:\imoti\holmes.bg_0509.tsv
 E:\imoti\holmes_sofia_oblast_0504.tsv
 E:\imoti\holmes_sofia_oblast_0509.tsv
+E:\imoti\holmes.bg_0529_beta.tsv
 */
 copy imoti_import (link, title, address, details, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, poly) 
-FROM 'E:\imoti\holmes_2103_2020.tsv' DELIMITER E'\t' CSV HEADER
+FROM 'E:\imoti\holmes.bg_0529_beta.tsv' DELIMITER E'\t' CSV HEADER
+
+select * from imoti_import limit 100
 
 
 CREATE FUNCTION ROUND(float,int) RETURNS NUMERIC AS $$
@@ -92,11 +95,11 @@ SELECT
 	substring(area from '[\d]+')::bigint as area,
 	CASE WHEN LOWER(TRIM(floor)) IN ('партер', 'сутерен') then 1 ELSE substring(floor from '[\d]+')::bigint END as floor,
 	description, views::bigint as views, date, agency,
-	'2020-03-21' as measurement_day
+	'2020-05-29' as measurement_day
 FROM imoti_import
 						 
 
-insert into imoti (link, title, address, details, region, place, lon, lat, id, price, price_sqm, currency, area, floor, description, views, date, agency, measurement_day)
+insert into imoti (link, title, address, details, region, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, measurement_day)
 select * from imoti_import_casted
 
 select measurement_day, count(*) from imoti group by 1 order by 1

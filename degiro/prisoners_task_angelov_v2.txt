@@ -1,0 +1,18 @@
+def find_safe_potition(prisoners, words):
+    pr_list = [i + 1 for i in range(prisoners)]
+    current_index = 0
+
+    while len(pr_list) > 1:
+        current_index = ((current_index - 1) + words) % len(pr_list)
+        del pr_list[current_index]
+        
+    print("With {} prisoners and {} syllables, I'd like to be number {}".format(prisoners, words, pr_list[0]))
+	
+	
+iterations = int(float(input()))
+
+for i in range(iterations):
+    input_ = input().split(" ")
+    words = int(float(input_[1]))
+    prisoners = int(float(input_[0]))
+    find_safe_potition(prisoners, words)

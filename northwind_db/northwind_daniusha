@@ -1,0 +1,36 @@
+select 
+	*,
+	lag(price) OVER (order by orderdate, orderid) as prev_order
+from (
+select
+	to_char(orderdate, 'YYYY-MM') as ym, 	
+	o.orderdate,
+	od.orderid,
+	sum(od.unitprice * od.quantity * (1 - od.discount)) as price
+from order_details as od
+left join orders as o using(orderid)
+group by orderid, o.orderdate
+order by 1, 2
+) as q
+
+-----------
+--- Monthly sales per country
+-----------
+select 
+	*,
+	lag(total_price) OVER (partition by country order by ym) as prev_order,
+	round((total_price / lag(total_price) OVER (partition by country order by ym))*100, 2) - 100 as perc
+	--(total_price) / (prev_order) - 1 as PercDiff
+from (
+select  
+	customers.country,
+	to_char(orders.orderdate, 'YYYY-MM') as ym, 
+	round(sum(od.unitprice * od.quantity * (1 - od.discount)), 2) as total_price
+from order_details as od
+left join orders  using(orderid)
+left join customers using(customerid)
+group by 1,2 
+order by 1,2 
+) as q
+
+									  

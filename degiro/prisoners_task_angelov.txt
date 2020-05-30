@@ -1,0 +1,33 @@
+def find_safe_potition(words, prisoners_left):
+    position = 1
+
+    lineup =  [True] * prisoners_left
+    safe_position = 0
+
+    while prisoners_left > 1:
+        dead_already = 0
+        current_word = 0
+
+        while current_word < words :
+            deadly_position = (safe_position + 1) % len(lineup) if len(lineup) != safe_position + 1 else safe_position + 1
+            if not lineup[(current_word + dead_already + position) % len(lineup)]:
+                dead_already += 1
+                continue
+            else:
+                current_word += 1
+                lineup
+                
+        # import pdb; pdb.set_trace()
+        lineup[safe_position] = False
+        prisoners_left -= 1
+
+    print(safe_position)
+	
+
+iterations = int(float(input()))
+
+for i in range(iterations):
+    input_ = input().split(" ")
+    words = int(float(input_[0]))
+    prisoners_left = int(float(input_[1]))
+    find_safe_potition(words, prisoners_left)

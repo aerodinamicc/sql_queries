@@ -48,7 +48,7 @@ order by 1
 		
 WITH sales_per_country as (
 select 
-	to_char(orderdate, 'YYYY-MM') as yw, 
+	to_char(orderdate, 'YYYY-MM') as ym, 
 	country,
 	sum(od.unitprice * od.quantity - (od.unitprice * od.quantity * od.discount)) as order_price
 from orders
@@ -62,6 +62,29 @@ select
 	SUM(order_price) OVER (PARTITION BY yw) as monthly_total
 from sales_per_country
 order by 1, 2
+		
+-----------
+--- What share of sales is coming from where
+-----------
+		
+WITH sales_per_country as (
+select 
+	extract(year from orderdate) as year_,
+	extract(month from orderdate) as month_,
+	to_char(orderdate, 'YYYY-MM') as ym, 
+	sum(od.unitprice * od.quantity - (od.unitprice * od.quantity * od.discount)) as order_price
+from orders
+left join order_details od using(orderid)
+left join customers using(customerid)
+group by 1, 2, 3
+)
+select
+	*,
+	LAG(order_price) OVER (PARTITION BY month_ ORDER BY year_ ASC) as last_years_numbers,
+	ROUND((order_price * 100. / LAG(order_price) OVER (PARTITION BY month_ ORDER BY year_ ASC)) - 100, 2) as mom_change
+	--SUM(order_price) OVER (PARTITION BY yw) as monthly_total
+from sales_per_country
+order by 1, 2, 3
 		
 -------------
 --- Total per country
