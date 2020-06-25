@@ -12,4 +12,4 @@ from imoti
 where measurement_day = date_of_interest $$
 LANGUAGE SQL;
 
-select measurement_day, count(*) as rows from most_recent('2020-05-09') group by 1
+select measurement_day, count(*) as rows from get_prop_from_date('2020-05-09') group by 1
