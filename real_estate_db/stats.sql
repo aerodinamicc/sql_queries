@@ -14,7 +14,7 @@ select
     stddev(price_sqm) as std_price_sqm 
 from imoti
 where measurement_day = (select max(measurement_day) from imoti)
-and lower(title) like '%апартамент%'
+and lower(title) like '%Ð°Ð¿Ð°Ñ€Ñ‚Ð°Ð¼ÐµÐ½Ñ‚%'
 group by 1
 order by 6 desc
 
@@ -64,23 +64,113 @@ day			rows	cont-ed	first	first	last	offers		offers	offers
 */
 
 -------------
--- Individual offers against neighbourhood aggregates
+-- Standart score against neighbourhood aggregates
 -------------
-
+with src as (
 select 
+	link,
 	id, 
+	lon,
+	lat,
 	title, 
 	place, 
 	price, 
 	price_sqm, 
 	area,
-	AVG(price) over (partition by title, place 
-					order by )
+	round(AVG(price_sqm) over (partition by title, place), 2) as mean,
+	round(price_sqm - AVG(price_sqm) over (partition by title, place), 2) as dev,
+	round(stddev(price_sqm) over (partition by title, place), 2) as std
 from imoti
 where measurement_day = (select max(measurement_day) from imoti)
-limit 10
+),
+sc as (
+select 
+	*,
+	round(case when dev <> 0 then dev/std else 0 end, 2) as price_sqm_anomaly
+from src
+)
+select 
+	*
+from sc 
+where standart_score < -2
+and lon is not null
+and lat is not null
+and price < 80000
+and lower(title) ~ 'апартамент'
 
 
-select * from imoti limit 10
+------------------------------
+------- Removed offer ids since last time
+------------------------------
+with date_rnk as (
+select 
+	measurement_day,
+	row_number() over (order by measurement_day desc) as rnk
+from (
+select
+	distinct measurement_day
+from imoti
+) i
+),
+ranked as (
+select
+	distinct link, id, lon, lat, title, place, price, price_sqm, measurement_day, date_rnk.rnk
+from imoti
+left join date_rnk using(measurement_day)
+)
+select 
+	place, title, COUNT(distinct(id)) as rows
+from ranked
+where measurement_day = (select measurement_day from date_rnk where rnk = 2)
+and lower(title) ~ 'апартамент'
+and not id in (select distinct id from ranked where rnk = 1)
+group by 1, 2
+order by 1, 2
 
-select distinct(poly) from imoti
+-----------------
+--- Get offers with standart scores
+-----------------
+
+with medians as (
+select 
+	place, 
+	title,
+	percentile_disc(0.5) within group (order by price_sqm) as median_price_sqm,
+	percentile_disc(0.5) within group (order by price) as median_price
+from imoti
+where measurement_day = (select max(measurement_day) from imoti)
+and lower(title) ~ 'апартамент'
+group by 1, 2
+),
+stats as (
+select 
+	link, title, place, price, price_sqm, area,
+	medians.median_price_sqm,
+	ROUND(avg(price_sqm) over (partition by place, title), 2) as mean_price_sqm,
+	ROUND(stddev(price_sqm) over (partition by place, title), 2) as std_price_sqm,
+	round(price_sqm - AVG(price_sqm) over (partition by title, place), 2) as dev_price_sqm,
+	round(medians.median_price, 2) as median_price,
+	ROUND(avg(price) over (partition by place, title), 2) as mean_price,
+	round(stddev(price) over (partition by place, title), 2) as std_price,
+	round(price - AVG(price) over (partition by title, place), 2) as dev_price	
+from imoti
+left join medians using(place, title)
+WHERE lower(imoti.title) ~ 'апартамент'
+)
+select 
+	place,
+	title,
+	price,
+	round(price_sqm) as price_sqm,
+	area,
+	round(case when dev_price_sqm <> 0 then dev_price_sqm/std_price_sqm else 0 end, 2) as price_sqm_anomaly,
+	ROUND(((price_sqm - mean_price_sqm) * 100) / mean_price_sqm, 2) as perc_price_sqm_diff_than_mean,
+	mean_price,
+	round(case when dev_price <> 0 then dev_price/std_price else 0 end, 2) as price_anomaly,
+	ROUND(((price - mean_price) * 100) / mean_price, 2) as perc_price_diff_than_mean,
+	link
+from stats
+where lower(place) ~ 'младост 4'
+
+
+	
