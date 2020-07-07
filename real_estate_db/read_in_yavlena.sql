@@ -65,7 +65,6 @@ FROM yavlena_import
 
 select * from yavlena_import_casted limit 100
 						 
-
 insert into yavlena (link, type, is_for_sale, extras, place, lon, lat, id, price, price_sqm, area, description, measurement_day)
 select * from yavlena_import_casted
 

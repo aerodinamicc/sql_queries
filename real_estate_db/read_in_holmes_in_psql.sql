@@ -1,9 +1,9 @@
 --------
 -- CREATE MASTER TABLE
 --------
-drop table if exists  imoti
+drop table if exists holmes
 
-CREATE TABLE imoti
+CREATE TABLE holmes
 (
 	LINK varchar, 
 	TITLE varchar,
@@ -30,9 +30,9 @@ CREATE TABLE imoti
 ---- Append new batch
 ----------------------
 
-drop table if exists imoti_import
+drop table if exists holmes_import
 
-CREATE TABLE imoti_import
+CREATE TABLE holmes_import
 (
 	LINK varchar, 
 	TITLE varchar,
@@ -60,13 +60,14 @@ F:\202006_verto\imoti\holmes.bg_0425.tsv
 F:\202006_verto\imoti\holmes.bg_0509.tsv
 F:\202006_verto\imoti\holmes.bg_0529.tsv
 F:\202006_verto\imoti\holmes.bg_0605.tsv
-F:\202006_verto\imoti\holmes.bg_0625.tsv
+D:/git/data_collection/real_estate/output/holmes.bg_0625.tsv
+D:/git/data_collection/real_estate/output/holmes.bg_0706.tsv
 */
 
-copy imoti_import (link, title, address, details, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, poly) 
-FROM 'F:\202006_verto\imoti\holmes.bg_0625.tsv' DELIMITER E'\t' CSV HEADER
+copy holmes_import (link, title, address, details, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, poly) 
+FROM 'D:/git/data_collection/real_estate/output/holmes.bg_0625.tsv' DELIMITER E'\t' CSV HEADER
 
-select * from imoti_import limit 100
+select * from holmes_import limit 100
 
 
 CREATE FUNCTION ROUND(float,int) RETURNS NUMERIC AS $$
@@ -74,9 +75,9 @@ CREATE FUNCTION ROUND(float,int) RETURNS NUMERIC AS $$
 $$ language SQL IMMUTABLE;
 
 
-drop table if exists imoti_import_casted
+drop table if exists holmes_import_casted
 
-CREATE TABLE imoti_import_casted AS
+CREATE TABLE holmes_import_casted AS
 SELECT 
 	link, title, 
 	substring(address from trim(place)||'(.*)') as address, 
@@ -97,16 +98,16 @@ SELECT
 	CASE WHEN LOWER(TRIM(floor)) IN ('партер', 'сутерен') then 1 ELSE substring(floor from '[\d]+')::bigint END as floor,
 	description, views::bigint as views, date, agency,
 	'2020-06-25' as measurement_day
-FROM imoti_import
+FROM holmes_import
 						 
 
-insert into imoti (link, title, address, details, region, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, measurement_day)
-select * from imoti_import_casted
+insert into holmes (link, title, address, details, region, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, measurement_day)
+select * from holmes_import_casted
 
-select measurement_day, count(*) from imoti group by 1 order by 1
+select measurement_day, count(*) from holmes group by 1 order by 1
 
 ----QA----
 select * from (
-select *, lower(details->>'Етаж:') as fl from imoti ) a
+select *, lower(details->>'Етаж:') as fl from holmes) a
 where fl = 'партер' and floor is null
 limit 10
