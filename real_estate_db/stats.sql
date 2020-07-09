@@ -14,7 +14,7 @@ select
     stddev(price_sqm) as std_price_sqm 
 from imoti
 where measurement_day = (select max(measurement_day) from imoti)
-and lower(title) like '%Ð°Ð¿Ð°Ñ€Ñ‚Ð°Ð¼ÐµÐ½Ñ‚%'
+and lower(imoti.title) ~ 'апартамент'
 group by 1
 order by 6 desc
 
@@ -96,7 +96,7 @@ where standart_score < -2
 and lon is not null
 and lat is not null
 and price < 80000
-and lower(title) ~ 'апартамент'
+and lower(imoti.title) ~ 'апартамент'
 
 
 ------------------------------
@@ -122,7 +122,7 @@ select
 	place, title, COUNT(distinct(id)) as rows
 from ranked
 where measurement_day = (select measurement_day from date_rnk where rnk = 2)
-and lower(title) ~ 'апартамент'
+WHERE lower(imoti.title) ~ 'апартамент'
 and not id in (select distinct id from ranked where rnk = 1)
 group by 1, 2
 order by 1, 2
@@ -171,6 +171,49 @@ select
 	link
 from stats
 where lower(place) ~ 'младост 4'
+
+with holmes as (
+select place, count(*) as rows, avg(price_sqm) as avg_price_sqm
+from holmes
+where measurement_day = (select max(measurement_day) from holmes)
+and lower(title) ~ 'апартамент'
+group by 1
+order by 3 desc
+),
+yavlena as (
+select place, count(*) as rows, avg(price_sqm) as avg_price_sqm
+from yavlena
+where is_for_sale
+and lower(type) ~ 'стаен'
+group by 1
+order by 3 desc
+)
+select 
+	*
+from holmes
+left join yavlena using(place)
+
+------
+-- imotibg
+------
+select place, count(*), avg(price_sqm) 
+from imotibg 
+where price_sqm > 1
+and lower(title) ~ 'апартамент'
+group by 1
+order by 3 desc
+
+--------------
+-- check yavlena in holmes records
+--------------
+select 
+agency, count(*)
+from holmes
+where measurement_day = (select max(measurement_day) from holmes)
+and agency ~ 'ЯВЛЕНА'
+group by 1
+order by 2 desc
+
 
 
 	
