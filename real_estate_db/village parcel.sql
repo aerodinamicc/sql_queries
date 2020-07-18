@@ -5,6 +5,7 @@
 CREATE TYPE parcels_type AS (id text, title text, address text, details JSON, place text, region text, lon float, lat float, price float, price_sqm float, 
 										  area BIGINT, floor BIGINT, views bigint, measurement_day text, agency text, date text, description text, link text);
 
+										
 CREATE FUNCTION get_parcels(is_regulation varchar(10), is_water varchar(10), is_electricity varchar(10), below_area bigint, below_price bigint) RETURNS SETOF parcels_type
 AS $$
 select id, title, address, details, place, region, lon, lat, price, price_sqm, area, floor, views, measurement_day, agency, date, description, link
@@ -14,10 +15,10 @@ select
 	trim(details->>'Вода:') as water,
 	trim(details->>'Ток:') as electricity,
 	*
-from imoti
-where measurement_day = (select max(measurement_day) from imoti)
+from holmes
+where measurement_day = (select max(measurement_day) from holmes)
 and title = 'ПАРЦЕЛ'
-and lon < 42.6266 --Ring road
+--and lon < 42.6266 --Ring road
 and area < below_area
 and price < below_price
 and details->>'Регулация:' is not null
@@ -30,7 +31,8 @@ $$
 LANGUAGE SQL;
 
 select * from get_parcels('ДА','ДА','ДА', 1000, 50000)
-
+where lon < 42.6266
+and place = 'с. Кокаляне'
 
 --------
 --- Agg stats

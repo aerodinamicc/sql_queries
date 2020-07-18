@@ -62,6 +62,7 @@ F:\202006_verto\imoti\holmes.bg_0529.tsv
 F:\202006_verto\imoti\holmes.bg_0605.tsv
 D:/git/data_collection/real_estate/output/holmes.bg_0625.tsv
 D:/git/data_collection/real_estate/output/holmes.bg_0706.tsv
+D:/git/data_collection/real_estate/output/holmes_2020-07-18.tsv
 */
 
 copy holmes_import (link, title, address, details, place, lon, lat, id, price, price_sqm, area, floor, description, views, date, agency, poly) 
@@ -111,3 +112,8 @@ select * from (
 select *, lower(details->>'Етаж:') as fl from holmes) a
 where fl = 'партер' and floor is null
 limit 10
+
+----------
+--- delete
+DELETE FROM holmes
+  WHERE measurement_day = '2020-06-25'

@@ -17,8 +17,9 @@ CREATE EXTERNAL TABLE real_estate_db.daily_measurements (
 `available_from` string,
 `views` string,
 `lon` string,
-`lat` string
-  )
+`lat` string,
+`measurement_day` string
+)
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
 WITH SERDEPROPERTIES
    (
@@ -26,6 +27,33 @@ WITH SERDEPROPERTIES
    'quoteChar' = '"',
    'escapeChar' = '\\')  -- field.delim specifies the delimiter of the data ('/t' for tab delimited)
 location 's3://real-estate-scrapping/raw/' -- Specify location of the data in S3 at the bucket-level
+TBLPROPERTIES (
+  "skip.header.line.count"="1" -- skip.header tells Athena that the first row is a header and to not upload that into the table
+  )
+  
+  
+---------------
+-- Etuovi details
+---------------
+  
+CREATE EXTERNAL TABLE real_estate_db.etuovi_details (
+`link` string,
+`selling_price` string,
+`debt_component` string,
+`total_price` string,
+`monthly_fee` string,
+`maintainance_fee` string,
+`financial_fee` string,
+`floor` string,
+`communications` string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES
+   (
+   'separatorChar' = '\t',
+   'quoteChar' = '"',
+   'escapeChar' = '\\')  -- field.delim specifies the delimiter of the data ('/t' for tab delimited)
+location 's3://real-estate-scrapping/etuovi_details/' -- Specify location of the data in S3 at the bucket-level
 TBLPROPERTIES (
   "skip.header.line.count"="1" -- skip.header tells Athena that the first row is a header and to not upload that into the table
   )
