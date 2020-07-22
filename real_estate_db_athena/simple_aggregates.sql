@@ -160,9 +160,12 @@ from (
 )
 where perc_price_sqm_diff_than_mean < -10
 --and perc_price_sqm_diff_than_mean > -15
-and price < 70000
+and price < 80000
+and regexp_like(lower(place), 'дружба')
 order by 9
 
+----------------------
+--- Random
 
 select *
 from real_estate_db.daily_measurements 
@@ -172,5 +175,113 @@ limit 10
 select *
 from real_estate_db.daily_measurements 
 where type = 'Парцел в регулация'
+
+
+-------------------------
+---- Reduced price
+
+with day_rnk as (
+select measurement_day, row_number() over (order by measurement_day desc) as rnk
+from real_estate_db.daily 
+group by 1
+),
+latest as (
+select 
+	site, 
+	id,
+	place,
+	type,
+	price,
+	area,
+	link
+from real_estate_db.daily 
+where measurement_day = (select measurement_day from day_rnk where rnk = 1)
+and url_extract_host(link) not in ('etuovi.com', 'www.vuokraovi.com') 
+),
+prev as (
+select 
+	site, 
+	id,
+	type,
+	price,
+	area
+from real_estate_db.daily 
+where measurement_day = (select measurement_day from day_rnk where rnk = 2)
+and country = 'bg'
+and is_for_sale
+),
+median_rent as (
+select 
+	place,
+	approx_percentile(price, 0.5) as avg_rent_price
+from real_estate_db.daily 
+where site in ('yavlena.com', 'imoteka.bg')
+and not is_for_sale
+and country = 'bg'
+and price < 10000
+group by 1
+)
+select
+	latest.site,
+	latest.id,
+	latest.place,
+	latest.type,
+	prev.price as prev_price,
+	latest.price as latest_price,
+	latest.price - prev.price as price_diff, 
+	median_rent.avg_rent_price,
+	latest.area,
+	latest.link
+from latest
+inner join prev on 
+	latest.site = prev.site 
+	and latest.id = prev.id 
+	and latest.type = prev.type 
+	and latest.area = prev.area
+	and latest.price < prev.price
+left join median_rent using(place)
+where latest.price < 60000
+
+
+------------------------------
+-- Check how many price rows are convertible to float
+
+select
+	url_extract_host(link) as site,
+	is_for_sale,
+	sum(case when price = '0' then 1 else 0 end) as zeros,
+	sum(case when price = '' then 1 else 0 end) as emptys,
+	sum(case when try_cast(replace(price, ' ') as double) is not null 
+				and try_cast(replace(price, ' ') as double) > 0 then 1 else 0 end) as is_converted_well,
+	sum(case when try_cast(replace(price, ' ') as double) is not null 
+				and try_cast(replace(price, ' ') as double) < 1 then 1 else 0 end) as is_converted_zero,
+	sum(case when try_cast(replace(price, ' ') as double) is null then 1 else 0 end) as is_converted_badly,
+	count(*)
+from real_estate_db.daily_measurements
+where measurement_day = '2020-07-19'
+group by 1, 2
+
+------
+--Rents
+
+select 
+	site,
+	count(*)
+from real_estate_db.daily
+where not is_for_sale 
+and measurement_day = date'2020-07-20'
+group by 1
+
+
+select 
+	*
+from real_estate_db.daily 
+where site in ('yavlena.com', 'imoteka.bg')
+and not is_for_sale
+and country = 'bg'
+and price < 10000
+and place = 'хаджи димитър'
+limit 200
+
 
 
