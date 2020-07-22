@@ -61,6 +61,8 @@ TBLPROPERTIES (
 ---------------------
 ---------Additional partition
 drop table if exists real_estate_db.daily
+
+-- aws s3 rm s3://real-estate-scrapping/processed/ --recursive --profile aero
   
 CREATE TABLE IF NOT EXISTS real_estate_db.daily
 WITH (partitioned_by = ARRAY['country', 'measurement_day', 'site'], format='parquet', external_location='s3://real-estate-scrapping/processed/') as
@@ -68,9 +70,31 @@ with clean as (
 SELECT
 	link,
 	id,
-	lower(trim(type)) as type,
+	replace(
+		replace(
+			replace(
+				replace(
+					replace(
+						lower(trim(type)),
+					'1-', 'едно'),
+				'2-', 'дву'),
+			'3-', 'три'),
+		'4-', 'четири'),
+	' апартамент', '') as type,
 	city,
-	lower(trim(place)) as place,
+	trim(
+	replace(
+		replace(
+			replace(
+				replace(
+					replace(
+						replace(lower(trim(place)), 'гр. софия', ''),
+					'софийска област', ''),
+				'българия', ''), 
+			'/', ''),
+		',', ' '),
+	'близо до', '')
+	) as place, --гр. София / ДрагалевциСофийска област, България
 	try_cast(is_for_sale as boolean) as is_for_sale,
 	try_cast(replace(price, ' ') as double) as price,
 	try_cast(replace(area, ' ') as double) as area,
@@ -87,17 +111,44 @@ SELECT
 from real_estate_db.raw_measurements
 where try_cast(replace(price, ' ') as double) is not null
 )
-select *
+select 
+	link, id, type,
+	regexp_like(type, '(?:стаен|мезонет|ателие)') as is_apartment,
+	regexp_like(type, '(?:стаен|^къща|^парцел|мезонет|ателие|вила)') as is_type,
+	city, place, is_for_sale, price, area, details, labels, year, available_from, views, lon, lat, country, measurement_day, site
 from clean
 
 
 select site, measurement_day, count(*)
 from real_estate_db.daily
 group by 1, 2
+order by 1, 2
 
 select url_extract_host(link), measurement_day, count(*)
 from real_estate_db.daily_measurements
 group by 1, 2
+
+
+select site, place, count(*)
+from real_estate_db.daily 
+where country = 'bg'
+group by 1, 2
+order by 2, 1
+
+select site, place, count(*)
+from real_estate_db.daily 
+where country = 'bg'
+group by 1, 2
+order by 2, 1
+
+select type, is_type, is_apartment, count(*)
+from real_estate_db.daily 
+where country = 'bg'
+and is_type
+group by 1, 2, 3
+order by 1, 2, 3
+--(?:стаен|^къща|^парцел|мезонет|ателие|вила)?
+
 
 
 

@@ -193,7 +193,8 @@ select
 	type,
 	price,
 	area,
-	link
+	link,
+	is_apartment
 from real_estate_db.daily 
 where measurement_day = (select measurement_day from day_rnk where rnk = 1)
 and url_extract_host(link) not in ('etuovi.com', 'www.vuokraovi.com') 
@@ -204,7 +205,8 @@ select
 	id,
 	type,
 	price,
-	area
+	area,
+	is_apartment
 from real_estate_db.daily 
 where measurement_day = (select measurement_day from day_rnk where rnk = 2)
 and country = 'bg'
@@ -213,13 +215,15 @@ and is_for_sale
 median_rent as (
 select 
 	place,
+	is_apartment,
 	approx_percentile(price, 0.5) as avg_rent_price
 from real_estate_db.daily 
-where site in ('yavlena.com', 'imoteka.bg')
-and not is_for_sale
+where not is_for_sale
+and is_apartment
+and is_type
 and country = 'bg'
 and price < 10000
-group by 1
+group by 1, 2
 )
 select
 	latest.site,
@@ -239,8 +243,9 @@ inner join prev on
 	and latest.type = prev.type 
 	and latest.area = prev.area
 	and latest.price < prev.price
-left join median_rent using(place)
+left join median_rent using(place, is_apartment)
 where latest.price < 60000
+order by site, latest.price desc
 
 
 ------------------------------
