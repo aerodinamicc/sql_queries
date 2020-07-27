@@ -205,8 +205,7 @@ select
 	id,
 	type,
 	price,
-	area,
-	is_apartment
+	area
 from real_estate_db.daily 
 where measurement_day = (select measurement_day from day_rnk where rnk = 2)
 and country = 'bg'
