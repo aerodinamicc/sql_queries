@@ -124,22 +124,11 @@ from real_estate_db.daily
 group by 1, 2
 order by 1, 2
 
-select url_extract_host(link), measurement_day, count(*)
-from real_estate_db.daily_measurements
-group by 1, 2
-
-
-select site, place, count(*)
+select place, count(*) as rows, array_distinct(array_agg(site)) as sites
 from real_estate_db.daily 
 where country = 'bg'
-group by 1, 2
-order by 2, 1
-
-select site, place, count(*)
-from real_estate_db.daily 
-where country = 'bg'
-group by 1, 2
-order by 2, 1
+group by 1
+order by 2 desc
 
 select type, is_type, is_apartment, count(*)
 from real_estate_db.daily 
@@ -147,7 +136,6 @@ where country = 'bg'
 and is_type
 group by 1, 2, 3
 order by 1, 2, 3
---(?:стаен|^къща|^парцел|мезонет|ателие|вила)?
 
 
 
