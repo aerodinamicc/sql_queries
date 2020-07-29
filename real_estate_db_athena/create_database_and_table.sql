@@ -30,6 +30,46 @@ location 's3://real-estate-scrapping/raw/' -- Specify location of the data in S3
 TBLPROPERTIES (
   "skip.header.line.count"="1" -- skip.header tells Athena that the first row is a header and to not upload that into the table
   )
+
+-------------
+-- NEWS
+-------------
+
+  CREATE DATABASE news_db
+
+--drop table if exists real_estate_db.daily_measurements
+
+CREATE EXTERNAL TABLE news_db.raw_measurements (
+ `comments` string,
+ `views` string,
+ `shares` string,
+ `created_timestamp` string,
+ `visited_timestamp` string,
+ `tags` string,
+ `section` string,
+ `title` string,
+ `subtitle` string,
+ `category` string,
+ `link` string,
+ `article_text` string,
+ `author` string,
+ `thumbs_down` string,
+ `thumbs_up` string,
+ `location` string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES
+   (
+   'separatorChar' = '\t',
+   'quoteChar' = '"',
+   'escapeChar' = '\\')  -- field.delim specifies the delimiter of the data ('/t' for tab delimited)
+location 's3://news-scrapping/raw/' -- Specify location of the data in S3 at the bucket-level
+TBLPROPERTIES (
+  "skip.header.line.count"="1" -- skip.header tells Athena that the first row is a header and to not upload that into the table
+  )
+  
+select * from news_db.raw_measurements
+limit 20
   
   
 ---------------
