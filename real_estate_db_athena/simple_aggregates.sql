@@ -193,11 +193,12 @@ select
 	type,
 	price,
 	area,
-	link,
-	is_apartment
+	link
 from real_estate_db.daily 
 where measurement_day = (select measurement_day from day_rnk where rnk = 1)
-and url_extract_host(link) not in ('etuovi.com', 'www.vuokraovi.com') 
+and is_type
+and is_for_sale
+and country = 'bg'
 ),
 prev as (
 select 
@@ -210,7 +211,9 @@ from real_estate_db.daily
 where measurement_day = (select measurement_day from day_rnk where rnk = 2)
 and country = 'bg'
 and is_for_sale
+and is_type
 ),
+/*
 median_rent as (
 select 
 	place,
@@ -223,7 +226,8 @@ and is_type
 and country = 'bg'
 and price < 10000
 group by 1, 2
-)
+),*/
+f1 as (
 select
 	latest.site,
 	latest.id,
@@ -232,20 +236,34 @@ select
 	prev.price as prev_price,
 	latest.price as latest_price,
 	latest.price - prev.price as price_diff, 
-	median_rent.avg_rent_price,
+	--median_rent.avg_rent_price,
 	latest.area,
 	latest.link
 from latest
-inner join prev on 
+left join prev on 
 	latest.site = prev.site 
 	and latest.id = prev.id 
 	and latest.type = prev.type 
 	and latest.area = prev.area
-	and latest.price < prev.price
-left join median_rent using(place, is_apartment)
-where latest.price < 60000
+	--and latest.price < prev.price
+-- where latest.price < 60000
+WHERE prev.site is not null
 order by site, latest.price desc
-
+),
+f2 as (
+select 
+site,
+sum(case when price_diff > 0 then 1 else 0 end) as price_incr,
+sum(case when price_diff < 0 then 1 else 0 end) as price_decr,
+sum(case when price_diff = 0 then 1 else 0 end) as price_same,
+sum(case when id is null then 1 else 0 end) as removed,
+sum(case when prev_price is null then 1 else 0 end) as new_offers,
+count(*) as rows
+from f1
+group by 1
+)
+--select * from f1 where price_diff < 0 order by price_diff
+select * from f2
 
 ------------------------------
 -- Check how many price rows are convertible to float
@@ -287,5 +305,40 @@ and price < 10000
 and place = 'хаджи димитър'
 limit 200
 
+------
+--pARCELS
+------
+with s as (
+select 
+	place, price, area, round(price/area) as price_sqm, link from real_estate_db.daily
+where measurement_day = date'2020-07-29'
+and type like 'парцел'
+and place like 'с.%'
+and is_for_sale 
+order by price
+)
+select 
+	place, 
+	round(avg(price_sqm)) as avg_price_sqm,  
+	min(price_sqm) as min_price_sqm,
+	round(approx_percentile(price_sqm, 0.25)) as price_sqm_25,
+	round(approx_percentile(price_sqm, 0.5)) as median_price_sqm, 
+	round(approx_percentile(price_sqm, 0.75)) as price_sqm_75, 
+	max(price_sqm) as max_price_sqm,
+	round(stddev(price_sqm), 2) as std_price_sqm,
+	count(*) as rows
+from s
+where price > 0
+group by 1
+order by 5 desc
+
+select 
+	place, 
+	price, area, round(price/area) as price_sqm, link from real_estate_db.daily
+where measurement_day = date'2020-07-29'
+and type like 'парцел'
+and place like '%мърчаево%'
+and is_for_sale 
+order by price
 
 

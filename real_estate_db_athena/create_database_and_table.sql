@@ -69,6 +69,7 @@ TBLPROPERTIES (
   )
   
 select * from news_db.raw_measurements
+where link like '%sportal.bg%'
 limit 20
   
   
