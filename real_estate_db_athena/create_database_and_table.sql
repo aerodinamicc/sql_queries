@@ -38,6 +38,7 @@ TBLPROPERTIES (
   CREATE DATABASE news_db
 
 --drop table if exists real_estate_db.daily_measurements
+-- aws s3 rm s3://news-scrapping/raw/ --recursive --profile aero
 
 CREATE EXTERNAL TABLE news_db.raw_measurements (
  `comments` string,

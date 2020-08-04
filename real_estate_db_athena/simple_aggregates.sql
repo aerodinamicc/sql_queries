@@ -337,8 +337,12 @@ select
 	price, area, round(price/area) as price_sqm, link from real_estate_db.daily
 where measurement_day = date'2020-07-29'
 and type like 'парцел'
-and place like '%мърчаево%'
+and (place like '%мърчаево%' 
+	or place like '%лозен%'
+	or place like '%кокаляне%'
+	)
+and PRICE < 35000 and price > 0
 and is_for_sale 
-order by price
+order by 4
 
 
