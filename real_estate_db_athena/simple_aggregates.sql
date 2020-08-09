@@ -208,7 +208,7 @@ select
 	price,
 	area
 from real_estate_db.daily 
-where measurement_day = (select measurement_day from day_rnk where rnk = 2)
+where measurement_day = (select measurement_day from day_rnk where rnk = 3)
 and country = 'bg'
 and is_for_sale
 and is_type
@@ -262,8 +262,8 @@ count(*) as rows
 from f1
 group by 1
 )
---select * from f1 where price_diff < 0 order by price_diff
-select * from f2
+select * from f1 where price_diff < 0 and latest_price <> 0 order by price_diff
+--select * from f2
 
 ------------------------------
 -- Check how many price rows are convertible to float
@@ -306,13 +306,13 @@ and place = 'хаджи димитър'
 limit 200
 
 ------
---pARCELS
+-- Prices per quarter
 ------
 with s as (
 select 
-	place, price, area, round(price/area) as price_sqm, link from real_estate_db.daily
-where measurement_day = date'2020-07-29'
-and type like 'парцел'
+	distinct id, place, price, area, round(price/area) as price_sqm, link 
+from real_estate_db.daily
+where type like 'парцел'
 and place like 'с.%'
 and is_for_sale 
 order by price
