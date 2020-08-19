@@ -8,7 +8,7 @@ CREATE TYPE get_prop_from_date_type AS (id text, title text, address text, detai
 CREATE FUNCTION get_prop_from_date(date_of_interest varchar(10)) RETURNS SETOF get_prop_from_date_type
 AS $$
 select id, title, address, details, place, region, lon, lat, price, price_sqm, area, floor, views, measurement_day, agency, date, description, link
-from imoti
+from holmes
 where measurement_day = date_of_interest $$
 LANGUAGE SQL;
 

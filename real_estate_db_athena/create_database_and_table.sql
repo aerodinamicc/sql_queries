@@ -107,7 +107,7 @@ drop table if exists real_estate_db.daily
 -- aws s3 rm s3://real-estate-scrapping/processed/ --recursive --profile aero
   
 CREATE TABLE IF NOT EXISTS real_estate_db.daily
-WITH (partitioned_by = ARRAY['country', 'measurement_day', 'site'], format='parquet', external_location='s3://real-estate-scrapping/processed/') as
+WITH (partitioned_by = ARRAY['measurement_day'], format='parquet', external_location='s3://real-estate-scrapping/processed/') as
 with clean as (
 SELECT
 	link,
@@ -148,8 +148,8 @@ SELECT
 	try_cast(replace(lon, ',', '.') as double) as lon,
 	try_cast(replace(lat, ',', '.') as double) as lat,
 	case when url_extract_host(link) in ('etuovi.com', 'www.vuokraovi.com') then 'fi' else 'bg' end as country,
-	date(measurement_day) as measurement_day,
-	regexp_extract(url_extract_host(link), '(?:www\.)?(.*)', 1) as site
+	regexp_extract(url_extract_host(link), '(?:www\.)?(.*)', 1) as site,
+	date(measurement_day) as measurement_day
 from real_estate_db.raw_measurements
 where try_cast(replace(price, ' ') as double) is not null
 )
@@ -157,7 +157,7 @@ select
 	link, id, type,
 	regexp_like(type, '(?:стаен|мезонет|ателие)') as is_apartment,
 	regexp_like(type, '(?:стаен|^къща|^парцел|мезонет|ателие|вила)') as is_type,
-	city, place, is_for_sale, price, area, details, labels, year, available_from, views, lon, lat, country, measurement_day, site
+	city, place, is_for_sale, price, area, details, labels, year, available_from, views, lon, lat, country, site, measurement_day
 from clean
 
 

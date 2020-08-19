@@ -17,8 +17,8 @@ from (
 		id,
 		last_value(price) over (partition by id order by measurement_day) - max_price.max_price as price_diff,
 		row_number() over (partition by id order by measurement_day desc) as rnk
-	from imoti
-		left join (select id, max(price) as max_price from imoti group by 1) max_price using(id)
+	from holmes
+		left join (select id, max(price) as max_price from holmes group by 1) max_price using(id)
 	) agg
 WHERE rnk = 1
 )
@@ -34,10 +34,10 @@ select
 	agg.price_diff,
 	round((agg.price_diff * 100. / (price + ABS(agg.price_diff)))::float, 2)::float as price_diff_percentage,
 	link
-from imoti
+from holmes
 left join (select distinct id, price_diff from agg) agg using(id)
 where agg.price_diff < min_diff
-and imoti.measurement_day = (select max(measurement_day) from imoti)
+and holmes.measurement_day = (select max(measurement_day) from holmes)
 and title ~ type_of_property
 and price < price_less_than
 order by agg.price_diff asc, id $$

@@ -195,7 +195,7 @@ select
 	area,
 	link
 from real_estate_db.daily 
-where measurement_day = (select measurement_day from day_rnk where rnk = 1)
+where measurement_day = (select measurement_day from day_rnk where rnk = 2)
 and is_type
 and is_for_sale
 and country = 'bg'
@@ -208,7 +208,7 @@ select
 	price,
 	area
 from real_estate_db.daily 
-where measurement_day = (select measurement_day from day_rnk where rnk = 3)
+where measurement_day = (select measurement_day from day_rnk where rnk = 7)
 and country = 'bg'
 and is_for_sale
 and is_type
@@ -344,5 +344,16 @@ and (place like '%мърчаево%'
 and PRICE < 35000 and price > 0
 and is_for_sale 
 order by 4
+
+---------
+--- 'кръстова вада'
+---------
+select distinct place, price, area, round(price/area) as price_sqm, type, link
+from real_estate_db.daily 
+where regexp_like(place, 'кръстова вада')
+and is_for_sale 
+and is_apartment 
+and price < 70000
+order by 4 desc
 
 
