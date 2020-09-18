@@ -169,8 +169,9 @@ order by 1, 2
 select place, count(*) as rows, array_distinct(array_agg(site)) as sites
 from real_estate_db.daily 
 where country = 'bg'
+and measurement_day = (select max(measurement_day) from real_estate_db.daily)
 group by 1
-order by 2 desc
+order by 1 desc
 
 select type, is_type, is_apartment, count(*)
 from real_estate_db.daily 
