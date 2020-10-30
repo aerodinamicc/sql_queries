@@ -52,3 +52,59 @@ order by agg.price_diff asc, id $$
 LANGUAGE SQL;
 
 select * from most_reduced('АПАРТАМЕНТ', -1000, 35000)
+
+-------------------
+--- daily
+-------------------
+
+CREATE TYPE reduced_properties_daily AS (place text, price float, old_price float, price_diff float, area float, type text, link text);
+
+										 
+drop function if exists most_reduced_daily
+										 
+CREATE FUNCTION most_reduced_daily(min_diff bigint, price_less_than bigint) RETURNS SETOF reduced_properties_daily
+AS $$
+with dates as (
+	select measurement_day, rnk
+	from 
+	(
+		select 
+			measurement_day, 
+			row_number() over (order by measurement_day desc) as rnk
+		from 
+		(
+			select measurement_day from daily_measurements group by 1
+		) foo
+	) foo1
+	where rnk in (1, 2)
+),
+entries as (
+	select 
+		place, price, area, type, link, measurement_day 
+	from daily_measurements dm 
+	left join daily_metadata meta 
+	on meta.site = dm.site and meta.id = dm.id
+	where measurement_day in (select measurement_day from dates)
+	and is_apartment
+	and is_for_sale
+	and dm.site not like 'address.bg'
+)
+select 
+	ent.place,
+	ent.price,
+	ent2.price as old_price,
+	ent.price - ent2.price as price_diff,
+	ent.area,
+	ent.type,
+	ent.link
+from entries ent
+left join entries ent2
+on ent.link = ent2.link 
+and ent.measurement_day > ent2.measurement_day
+where ent2.measurement_day is not null
+and ent.price - ent2.price < min_diff
+and ent.price < price_less_than
+order by 4 $$
+LANGUAGE SQL;
+
+select * from most_reduced_daily(-1000, 100000)
