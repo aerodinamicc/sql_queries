@@ -62,7 +62,7 @@ CREATE TYPE reduced_properties_daily AS (place text, price float, old_price floa
 										 
 drop function if exists most_reduced_daily
 										 
-CREATE FUNCTION most_reduced_daily(min_diff bigint, price_less_than bigint) RETURNS SETOF reduced_properties_daily
+CREATE FUNCTION most_reduced_daily(min_diff bigint, price_less_than bigint, lookback_period int) RETURNS SETOF reduced_properties_daily
 AS $$
 with dates as (
 	select measurement_day, rnk
@@ -76,15 +76,17 @@ with dates as (
 			select measurement_day from daily_measurements group by 1
 		) foo
 	) foo1
-	where rnk in (1, 2)
+	where rnk in (select * from generate_series(1, 20))
 ),
 entries as (
 	select 
-		place, price, area, type, link, measurement_day 
+		distinct place, price, area, type, link, dm.measurement_day 
 	from daily_measurements dm 
 	left join daily_metadata meta 
 	on meta.site = dm.site and meta.id = dm.id
-	where measurement_day in (select measurement_day from dates)
+	left join dates
+	on dates.measurement_day = dm.measurement_day
+	where dm.measurement_day in (select measurement_day from dates)
 	and is_apartment
 	and is_for_sale
 	and dm.site not like 'address.bg'
@@ -101,9 +103,13 @@ from entries ent
 left join entries ent2
 on ent.link = ent2.link 
 and ent.measurement_day > ent2.measurement_day
-where ent2.measurement_day is not null
+where price < price_less_than
+and ent2.measurement_day <= (select measurement_day 
+								from dates 
+								where rnk = lookback_period)
+and ent.measurement_day = (select max(measurement_day) 
+							from dates)
 and ent.price - ent2.price < min_diff
-and ent.price < price_less_than
 order by 4 $$
 LANGUAGE SQL;
 
