@@ -52,6 +52,8 @@ and not regexp_like(place, '^с.')
 group by 1, 2
 )
 SELECT 
+	d.link,
+	'' as adv,
 	d.place,
 	d.type,
 	d.area,
@@ -59,8 +61,7 @@ SELECT
 	round(d.price/d.area) AS price_sqm,
 	round(d.price/d.area)-s.median_price_sqm as below_median_sqm,
 	s.median_price_sqm as median,
-	d.details,
-	d.link
+	d.details
 from real_estate_db.daily as d 
 inner join stats s 
 	on s.place = d.place 
@@ -68,9 +69,10 @@ inner join stats s
 	and s.median_price_sqm >= round(d.price/d.area)
 where measurement_day = (select max(measurement_day) from real_estate_db.daily)
 and is_apartment 
-and is_for_sale 
+and is_for_sale [,cmn]
 and regexp_like(d.place, 'изгрев|^младост|брези$|^дружба|иван вазов|^изток|слатина|дианабад|лозенец|хладилника$|яворов|дианабад|мусагеница|дървеница')
 and price > 0 and price < 110000
+and round(d.price/d.area)-s.median_price_sqm < -100
 and area > 0
 and not regexp_like(d.place, '^с.')
 order by 6
