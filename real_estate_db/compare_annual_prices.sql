@@ -39,7 +39,7 @@ select
 	round(avg(case when title = 'многостаен апартамент' and measurement_day = (select min(m_day) from periods) then price_sqm else null end)) as five_rooms_before,
 	round(avg(case when title = 'многостаен апартамент' and measurement_day = (select max(m_day) from periods) then price_sqm else null end)) as five_rooms_after,
 	round(avg(case when measurement_day = (select min(m_day) from periods) then price_sqm else null end)) as overall_before,
-	round(avg(case when measurement_day = (select max(m_day) from periods) then price_sqm else null end)) as overall_after,
+	round(avg(case when measurement_day = (select max(m_day) from periods) then price_sqm else null end)) as overall_after
 from holmes h 
 where measurement_day IN (select distinct m_day from periods)
 and title ~ 'апартамент'
